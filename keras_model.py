@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from time import strftime
 
+from sklearn.cluster import KMeans
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Dropout
@@ -36,15 +37,23 @@ def save_predictions(X, model):
 
 # Load the training data
 train_raw = load_data('training_data.txt')
+
+# Perhaps cluster the training data here
+kmeans = KMeans(n_clusters=20, random_state=0).fit(train_raw)
+x_train_clusters = kmeans.predict(train_raw)
+
+# Break the training data up into x and y components
 X_train, y_train = train_raw[:, 1:], train_raw[:, 0]
 n_features = len(X_train[0])
+n_cluster_features = len(x_train_clusters)
+
 
 
 ## Model creation goes here
 def keras_model():
 	# create model
     model = Sequential()
-    model.add(Dense(100, input_dim=1000,
+    model.add(Dense(100, input_dim=n_features,
                     kernel_initializer='normal',
                     activation='relu'))
                     #kernel_regularizer=regularizers.l2(0.01),
@@ -69,12 +78,17 @@ def keras_model():
 # results = cross_val_score(pipeline, X_train, y_train, cv=kfold)
 # print("Keras Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 
+n_train = 19000
+#rx_train, ry_train = X_train[:n_train], y_train[:n_train]
+#X_val, y_val = X_train[n_train:], y_train[n_train:]
+
+
 model = KerasClassifier(build_fn=keras_model, epochs=10, batch_size=100, verbose=0)
-model.fit(X_train, y_train)
+model.fit(X_train, y_train)#, validation_data=(X_val, y_val))
 # evaluate using 10-fold cross validation
 kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
 results = cross_val_score(model, X_train, y_train, cv=kfold)
-print("Average cross validation error: ", results.mean())
+print("cross validation error: ", results.mean())
 
 
 #####
@@ -82,6 +96,8 @@ print("Average cross validation error: ", results.mean())
 # Save the predictions
 test_raw = load_data('test_data.txt')
 X_test = test_raw[:, :]
+
+# Perhaps clustter the test data
 
 save_predictions(X_test, model)
 
