@@ -1,0 +1,2 @@
+best score: 0.84605555733
+best params: {'opt': 'rmsprop', 'batch_size': 1000, 'layer1': 50, 'epochs': 20, 'dropout': 0.7}
