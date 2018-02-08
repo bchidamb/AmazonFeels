@@ -35,12 +35,7 @@ def test(X, y, model):
     return np.sum(pred == y) / len(y)
     
 
-# Load the training data
-train_raw = load_data('training_data.txt')
 
-# Break the training data up into x and y components
-X_train, y_train = train_raw[:, 1:], train_raw[:, 0]
-n_features = len(X_train[0])
 
 
 ## Model creation goes here
@@ -56,25 +51,61 @@ def keras_model():
     return model
 
 
+# normalize the input, from set 2
+# if None passed into means, stds calcucate it
+def normalize(X, means, stds):
+    X_trans = np.copy(X)
+    X_trans = X_trans.T # transpose the columns and rows, normalizing rows
+    # go through each column and find the mean and standard deviation
+    if means is None:
+        print('means is None, calculating means/stds...')
+        means = [1]
+        stds = [1]
+        for a in range(1, len(X_trans)):
+            means.append(np.average(X_trans[a]))
+            stds.append(np.std(X_trans[a]))
+    
+    # go through the rows and columns of X and update each element to normalize it
+    for i in range(1, len(X_trans)):
+        for j in range(len(X_trans[0])):
+            X_trans[i][j] = (X_trans[i][j] - means[i]) / stds[i]
+    
+    return [X_trans.T, means, stds]
+
 #####
 ### Machine learning thingy goes here
 
-n_train = 20000
+# Load the training data
+train_raw = load_data('training_data.txt')
+train_raw = np.random.permutation(train_raw)
+
+# Break the training data up into x and y components
+X_train, y_train = train_raw[:, 1:], train_raw[:, 0]
+n_features = len(X_train[0])
+
+n_train = 18000
 n_val = len(train_raw) - n_train
 rx_train, ry_train = X_train[:n_train], y_train[:n_train]
 X_val, y_val = X_train[n_train:], y_train[n_train:]
+
+print(len(train_raw))
+print('X_val', type(rx_train), rx_train)
+
+rx_train, means, stds = normalize(rx_train, None, None)
+X_val, meansTemp, stdsTemp = normalize(X_val, means, stds)
 
 model = KerasClassifier(build_fn=keras_model, epochs=20, batch_size=1000, verbose=1)
 model.fit(rx_train, ry_train)
 
 print('train / val split : %d / %d' % (n_train, n_val))
 print('train acc :', test(rx_train, ry_train, model))
-# print('val acc :', test(X_val, y_val, model))
+print('val acc :', test(X_val, y_val, model))
 
 
 # Save the predictions
 test_raw = load_data('test_data.txt')
 X_test = test_raw[:, :]
+X_test, meansTemp, stdsTemp = normalize(X_test, means, stds)
 
 save_predictions(X_test, model)
 
